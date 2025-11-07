@@ -1,8 +1,9 @@
 Package: rOFI
 Title: Compute and Visualize Order-Flow Imbalance Patterns
 Version: 0.1.0
-Authors@R: 
-    person("Dionysios", "Poniros", , "your.email@example.com", role = c("aut", "cre"))
+Authors@R:
+    person("Dionysios", "Poniros", , "dponiros@example.com", role = c("aut", "cre"),
+           comment = c(ORCID = "YOUR-ORCID-HERE"))
 Description: A beginner-friendly R package for computing and visualizing order-flow 
     imbalance (OFI) signals from trade-level data. Provides tools to calculate simple OFI, 
     imbalance ratios, and cumulative patterns, along with functions for simulating 

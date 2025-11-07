@@ -1,0 +1,13 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^data-raw$
+^\.github$
+^build_package\.R$
+^setup_github\.sh$
+^PACKAGE_SUMMARY\.md$
+^PRE_PUSH_CHECKLIST\.md$
+^CONTRIBUTING\.md$
+^NEWS\.md$
+^\.git$
+^\.gitignore$
+^README\.Rmd$

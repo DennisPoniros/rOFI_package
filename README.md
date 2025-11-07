@@ -223,7 +223,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Created as an Honors Option project for STAT 611 at [Your University]
+- Created as an Honors Option project for STAT 611
 - Thanks to Dr. Teresa Gibson for mentorship
 - Inspired by academic research in market microstructure
 
