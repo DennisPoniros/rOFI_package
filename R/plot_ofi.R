@@ -32,18 +32,81 @@
 #' @importFrom rlang .data
 #'
 #' @examples
+#' # ===========================================
+#' # Example 1: Basic Plotting
+#' # ===========================================
+#'
 #' # Generate data and compute OFI
 #' trades <- simulate_orders(n = 1000, seed = 123)
 #' ofi <- compute_ofi(trades, window = "1 min")
-#' 
-#' # Plot default metrics
+#'
+#' # Plot default metrics (OFI, OIR, Cumulative OFI)
 #' plot_ofi(ofi)
-#' 
-#' # Plot only OFI and volume
+#'
+#' # ===========================================
+#' # Example 2: Plot Individual Metrics
+#' # ===========================================
+#'
+#' # Just OFI (raw order-flow imbalance)
+#' plot_ofi(ofi, which = "ofi")
+#'
+#' # Just OIR (normalized -1 to 1)
+#' plot_ofi(ofi, which = "oir")
+#'
+#' # Just cumulative OFI (shows trend)
+#' plot_ofi(ofi, which = "ofi_cum")
+#'
+#' # Total volume
+#' plot_ofi(ofi, which = "vol_total")
+#'
+#' # ===========================================
+#' # Example 3: Compare Multiple Metrics
+#' # ===========================================
+#'
+#' # Compare OFI and volume
 #' plot_ofi(ofi, which = c("ofi", "vol_total"))
-#' 
-#' # Plot without facets
+#'
+#' # Buy vs Sell volume
+#' plot_ofi(ofi, which = c("B", "S"))
+#'
+#' # All metrics
+#' plot_ofi(ofi, which = c("ofi", "oir", "ofi_cum", "vol_total"))
+#'
+#' # ===========================================
+#' # Example 4: Customization
+#' # ===========================================
+#'
+#' # Without facets (single panel)
 #' plot_ofi(ofi, which = "ofi", facet = FALSE)
+#'
+#' # With custom title
+#' plot_ofi(ofi,
+#'          which = "ofi",
+#'          title = "Order-Flow Imbalance Analysis",
+#'          subtitle = "1-minute windows")
+#'
+#' # Change reference line
+#' plot_ofi(ofi, which = "oir", ref_line = 0.2)
+#'
+#' # ===========================================
+#' # Example 5: Advanced ggplot2 Customization
+#' # ===========================================
+#'
+#' \dontrun{
+#' # Add custom ggplot2 layers
+#' library(ggplot2)
+#'
+#' plot_ofi(ofi, which = "ofi") +
+#'   geom_hline(yintercept = c(-1000, 1000),
+#'              linetype = "dashed",
+#'              color = "red") +
+#'   theme_minimal() +
+#'   labs(title = "My Custom OFI Plot")
+#'
+#' # Different color scheme
+#' plot_ofi(ofi, which = "oir") +
+#'   scale_color_manual(values = c("darkblue"))
+#' }
 plot_ofi <- function(ofi_tbl,
                     which = c("ofi", "oir", "ofi_cum"),
                     ref_line = 0,
