@@ -22,6 +22,7 @@
 - 📉 **Advanced OFI Calculations**: EWMA smoothing, momentum, and acceleration metrics
 - ✅ **Data Quality Tools**: Comprehensive validation, outlier detection, and automated cleaning
 - 📊 **Statistical Testing**: Autocorrelation tests, lead-lag analysis, and bootstrap significance testing
+- 🔬 **Market Microstructure Models**: Kyle's lambda, price impact decomposition, VPIN, and spread analysis
 
 ## Installation
 
@@ -184,6 +185,32 @@ print(leadlag$interpretation)
 # Bootstrap significance test
 boot_test <- bootstrap_ofi_significance(ofi, n_bootstrap = 1000)
 print(paste("P-value:", boot_test$p_value))
+```
+
+### Market Microstructure Models
+
+```r
+# Kyle's Lambda - measure of price impact
+kyle <- kyle_lambda_estimation(trades, window = "1 min")
+print(kyle)
+
+# Decompose price impact into temporary and permanent components
+impact <- estimate_price_impact(trades, window = "1 min", decay_periods = 5)
+print(paste("Permanent impact:", impact$permanent_impact))
+print(paste("Temporary impact:", impact$temporary_impact))
+
+# VPIN - Volume-synchronized probability of informed trading
+vpin_data <- compute_vpin(trades, n_buckets = 50, lookback = 50)
+toxic_periods <- vpin_data[vpin_data$vpin > 0.7, ]  # High toxicity
+print(paste(nrow(toxic_periods), "toxic periods detected"))
+
+# Effective spread analysis
+spreads <- compute_effective_spread(trades, midpoint_method = "rolling")
+print(paste("Mean effective spread:", mean(spreads$effective_spread)))
+
+# Spread decomposition into adverse selection and realized spread
+decomp <- decompose_spread(trades, horizon = 5)
+print(paste("Adverse selection %:", decomp$pct_adverse_selection))
 ```
 
 ## Understanding OFI Metrics

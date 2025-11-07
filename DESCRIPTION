@@ -19,7 +19,8 @@ Imports:
     slider (>= 0.2.0),
     ggplot2 (>= 3.3.0),
     rlang (>= 0.4.0),
-    tibble (>= 3.0.0)
+    tibble (>= 3.0.0),
+    zoo (>= 1.8.0)
 Suggests: 
     testthat (>= 3.0.0),
     knitr,
