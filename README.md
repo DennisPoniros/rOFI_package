@@ -11,11 +11,17 @@
 
 ## Key Features
 
+### Core Functionality
 - 📊 **Multiple OFI Metrics**: Simple OFI, Order Imbalance Ratio (OIR), Cumulative OFI, and Dollar-weighted OFI
 - ⏱️ **Flexible Time Windows**: Calendar-based, rolling, or tick-based aggregation
 - 📈 **Built-in Visualizations**: Time-series plots and distribution analysis
 - 🎲 **Synthetic Data Generation**: Create realistic order flow for testing and education
 - 🔧 **Data Standardization**: Handle various trade data formats seamlessly
+
+### Advanced Features (NEW in v0.1.0)
+- 📉 **Advanced OFI Calculations**: EWMA smoothing, momentum, and acceleration metrics
+- ✅ **Data Quality Tools**: Comprehensive validation, outlier detection, and automated cleaning
+- 📊 **Statistical Testing**: Autocorrelation tests, lead-lag analysis, and bootstrap significance testing
 
 ## Installation
 
@@ -122,6 +128,62 @@ clean_data <- as_ofi(
   size_col = "volume",
   price_col = "px"
 )
+```
+
+## Advanced Features
+
+### Advanced OFI Calculations
+
+```r
+# Exponentially weighted moving average (EWMA) for smoothing
+ofi_smooth <- compute_ewma_ofi(ofi, lambda = 0.94)
+
+# Calculate momentum (rate of change)
+ofi_with_momentum <- compute_ofi_momentum(ofi, lookback = 5)
+
+# Calculate acceleration (second derivative)
+ofi_with_accel <- compute_ofi_acceleration(ofi, lookback = 5)
+
+# Chain multiple transformations
+ofi_advanced <- ofi |>
+  compute_ewma_ofi(lambda = 0.9) |>
+  compute_ofi_momentum(lookback = 3) |>
+  compute_ofi_acceleration(lookback = 3)
+```
+
+### Data Quality & Validation
+
+```r
+# Validate your trade data before analysis
+validation <- validate_trade_data(trades)
+print(validation)
+
+# Automatically clean problematic data
+trades_clean <- clean_trade_data(
+  trades,
+  remove_outliers = TRUE,
+  remove_duplicates = TRUE
+)
+
+# Detect outliers with multiple methods
+outliers <- detect_outliers_ofi(trades, method = "iqr", threshold = 3)
+print(paste(outliers$n_outliers, "outliers detected"))
+```
+
+### Statistical Testing
+
+```r
+# Test for autocorrelation in OFI
+acf_test <- test_ofi_autocorrelation(ofi, max_lag = 20)
+print(acf_test)
+
+# Analyze lead-lag relationship with prices
+leadlag <- ofi_lead_lag_analysis(trades, window = "1 min")
+print(leadlag$interpretation)
+
+# Bootstrap significance test
+boot_test <- bootstrap_ofi_significance(ofi, n_bootstrap = 1000)
+print(paste("P-value:", boot_test$p_value))
 ```
 
 ## Understanding OFI Metrics
