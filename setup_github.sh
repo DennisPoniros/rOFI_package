@@ -35,14 +35,14 @@ fi
 if git remote | grep -q "origin"; then
     echo "✓ Remote 'origin' already exists"
     echo "  Current URL: $(git remote get-url origin)"
-    read -p "Do you want to update it to https://github.com/DennisPoniros/rOFI_package.git? (y/n) " -n 1 -r
+    read -p "Do you want to update it to https://github.com/DennisPoniros/rOFI_package? (y/n) " -n 1 -r
     echo
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        git remote set-url origin https://github.com/DennisPoniros/rOFI_package.git
+        git remote set-url origin https://github.com/DennisPoniros/rOFI_package
         echo "✓ Remote URL updated"
     fi
 else
-    git remote add origin https://github.com/DennisPoniros/rOFI_package.git
+    git remote add origin https://github.com/DennisPoniros/rOFI_package
     echo "✓ Remote 'origin' added"
 fi
 
