@@ -1,0 +1,354 @@
+---
+title: "Getting Started with rOFI"
+author: "Dionysios Poniros"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with rOFI}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4,
+  fig.align = "center"
+)
+```
+
+```{r load-package}
+library(rOFI)
+library(dplyr)
+library(ggplot2)
+```
+
+## Introduction
+
+Order-flow imbalance (OFI) is a fundamental concept in market microstructure that measures the difference between buying and selling pressure in financial markets. The `rOFI` package makes these concepts accessible through simple, well-documented functions.
+
+### What is Order-Flow Imbalance?
+
+At its core, OFI answers a simple question: "Are there more buyers or sellers in the market right now?"
+
+- **Positive OFI**: More buying than selling (bullish pressure)
+- **Negative OFI**: More selling than buying (bearish pressure)  
+- **Near-zero OFI**: Balanced market
+
+## Your First OFI Analysis
+
+Let's start with a complete example:
+
+```{r first-example}
+# Generate synthetic trading data
+trades <- simulate_orders(
+  n = 5000,        # 5000 trades
+  lambda = 10,     # ~10 trades per minute
+  imb = 0.1,       # Slight buying pressure
+  seed = 123       # For reproducibility
+)
+
+# Look at the data structure
+head(trades)
+
+# Compute OFI with 5-minute windows
+ofi_results <- compute_ofi(trades, window = "5 min")
+
+# Examine the results
+head(ofi_results)
+```
+
+### Understanding the Output
+
+The `compute_ofi()` function returns several metrics:
+
+- `window_start`: Beginning of each time window
+- `B`: Total buy volume in the window
+- `S`: Total sell volume in the window
+- `ofi`: Simple order-flow imbalance (B - S)
+- `oir`: Order imbalance ratio, normalized to [-1, 1]
+- `ofi_cum`: Cumulative OFI (running total)
+- `vol_total`: Total volume (B + S)
+- `n_trades`: Number of trades in the window
+
+## Visualization
+
+The package includes built-in plotting functions:
+
+```{r basic-plot, fig.height=6}
+# Plot multiple metrics
+plot_ofi(ofi_results, which = c("ofi", "oir", "ofi_cum"))
+```
+
+### Customizing Plots
+
+```{r custom-plot}
+# Focus on the imbalance ratio with custom styling
+plot_ofi(ofi_results, 
+         which = "oir",
+         ref_line = 0,
+         title = "Order Imbalance Ratio Over Time",
+         subtitle = "Detecting buying and selling pressure")
+```
+
+### Distribution Analysis
+
+Understanding the distribution of imbalance helps identify market regimes:
+
+```{r distribution}
+# Histogram of imbalance ratios
+plot_ofi_dist(ofi_results, metric = "oir", bins = 25)
+```
+
+## Window Types
+
+The package supports three types of aggregation windows:
+
+### 1. Calendar Windows (Default)
+
+Fixed time intervals aligned to clock time:
+
+```{r calendar-windows}
+# Different time scales
+ofi_1min <- compute_ofi(trades, window = "1 min")
+ofi_10min <- compute_ofi(trades, window = "10 min")
+ofi_30min <- compute_ofi(trades, window = "30 min")
+
+# Compare granularities
+data.frame(
+  Window = c("1 min", "10 min", "30 min"),
+  Observations = c(nrow(ofi_1min), nrow(ofi_10min), nrow(ofi_30min)),
+  Mean_OFI = c(mean(ofi_1min$ofi), mean(ofi_10min$ofi), mean(ofi_30min$ofi))
+)
+```
+
+### 2. Rolling Windows
+
+Overlapping windows for smoother analysis:
+
+```{r rolling-windows}
+# 60-second rolling window
+ofi_rolling <- compute_ofi(trades, rolling = lubridate::dseconds(60))
+
+# More observations due to overlap
+nrow(ofi_rolling)
+
+# Smoother patterns
+plot_ofi(ofi_rolling, which = "oir", title = "Rolling 60-Second OIR")
+```
+
+### 3. Tick-Based Windows
+
+Fixed number of trades per window (useful for irregular data):
+
+```{r tick-windows}
+# Every 100 trades
+ofi_ticks <- compute_ofi(trades, n_ticks = 100)
+
+# Consistent trade counts
+summary(ofi_ticks$n_trades)
+
+plot_ofi(ofi_ticks, which = "ofi", title = "OFI by 100-Trade Windows")
+```
+
+## Working with Real Data
+
+The `as_ofi()` function standardizes various data formats:
+
+```{r real-data}
+# Example: Your data might look different
+raw_trades <- data.frame(
+  time = Sys.time() + cumsum(rexp(100, rate = 0.1)),
+  direction = sample(c("BUY", "SELL"), 100, replace = TRUE, prob = c(0.55, 0.45)),
+  volume = round(rlnorm(100, log(500), 0.5)),
+  px = 100 + cumsum(rnorm(100, 0, 0.1))
+)
+
+# Standardize for rOFI
+clean_trades <- as_ofi(
+  raw_trades,
+  time_col = "time",
+  side_col = "direction",
+  size_col = "volume",
+  price_col = "px",
+  tz = "America/New_York"
+)
+
+# Now ready for analysis
+ofi_real <- compute_ofi(clean_trades, window = "1 min")
+```
+
+## Dollar-Weighted OFI
+
+When prices are available, compute value-weighted metrics:
+
+```{r dollar-ofi}
+# Generate data with realistic price movement
+trades_with_price <- simulate_orders(
+  n = 2000,
+  price0 = 100,
+  drift = 0.01,    # Slight upward drift
+  vol = 0.5,       # Moderate volatility
+  seed = 456
+)
+
+# Compute with price weighting
+ofi_dollar <- compute_ofi(trades_with_price, 
+                          window = "5 min",
+                          price_weighted = TRUE)
+
+# Dollar OFI is now available
+head(select(ofi_dollar, window_start, ofi, ofi_dollar))
+
+# Compare size-weighted vs dollar-weighted
+plot_ofi(ofi_dollar, which = c("ofi", "ofi_dollar"))
+```
+
+## Market Regime Detection
+
+Use OFI patterns to identify market conditions:
+
+```{r regime-detection}
+# Simulate different market regimes
+set.seed(789)
+
+# Balanced market
+balanced_trades <- simulate_orders(n = 1000, imb = 0)
+# Bullish market
+bullish_trades <- simulate_orders(n = 1000, imb = 0.3)
+# Bearish market  
+bearish_trades <- simulate_orders(n = 1000, imb = -0.3)
+
+# Compute OFI
+ofi_balanced <- compute_ofi(balanced_trades, window = "5 min")
+ofi_bullish <- compute_ofi(bullish_trades, window = "5 min")
+ofi_bearish <- compute_ofi(bearish_trades, window = "5 min")
+
+# Compare statistics
+regime_stats <- data.frame(
+  Regime = c("Balanced", "Bullish", "Bearish"),
+  Mean_OIR = c(mean(ofi_balanced$oir), 
+               mean(ofi_bullish$oir),
+               mean(ofi_bearish$oir)),
+  SD_OIR = c(sd(ofi_balanced$oir),
+             sd(ofi_bullish$oir), 
+             sd(ofi_bearish$oir)),
+  Skew = c(moments::skewness(ofi_balanced$oir),
+           moments::skewness(ofi_bullish$oir),
+           moments::skewness(ofi_bearish$oir))
+)
+
+print(regime_stats)
+```
+
+## Advanced Example: Intraday Patterns
+
+Analyze how OFI evolves throughout a trading day:
+
+```{r intraday, fig.height=5}
+# Simulate a full trading day (9:30 AM - 4:00 PM)
+trading_day <- simulate_orders(
+  n = 10000,
+  start = as.POSIXct("2024-01-15 09:30:00", tz = "America/New_York"),
+  lambda = 25,  # ~25 trades per minute
+  imb = 0.05,   # Slight overall buying pressure
+  seed = 2024
+)
+
+# Compute OFI
+ofi_intraday <- compute_ofi(trading_day, window = "10 min")
+
+# Add hour of day for analysis
+ofi_intraday <- ofi_intraday %>%
+  mutate(hour = lubridate::hour(window_start))
+
+# Average OFI by hour
+hourly_pattern <- ofi_intraday %>%
+  group_by(hour) %>%
+  summarise(
+    mean_oir = mean(oir),
+    mean_volume = mean(vol_total),
+    .groups = "drop"
+  )
+
+# Plot hourly patterns
+ggplot(hourly_pattern, aes(x = hour, y = mean_oir)) +
+  geom_col(fill = "#2E86AB", alpha = 0.7) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "Average Order Imbalance by Hour",
+       x = "Hour of Day",
+       y = "Mean OIR") +
+  scale_x_continuous(breaks = 9:15, labels = paste0(9:15, ":00"))
+```
+
+## Performance Considerations
+
+For large datasets, consider these optimizations:
+
+```{r performance, eval=FALSE}
+# For very large datasets (>1M trades)
+large_trades <- simulate_orders(n = 1000000)
+
+# Use larger windows to reduce output size
+ofi_large <- compute_ofi(large_trades, window = "10 min")
+
+# Or use tick-based windows for consistent computation
+ofi_ticks_large <- compute_ofi(large_trades, n_ticks = 1000)
+
+# For parallel processing (not included in base package)
+library(furrr)
+plan(multisession, workers = 4)
+
+# Split data and process in parallel
+# (Example code - would need custom implementation)
+```
+
+## Tips and Best Practices
+
+1. **Choose appropriate window sizes**: 
+   - High-frequency data: 1-5 minutes
+   - Daily analysis: 10-30 minutes
+   - Long-term trends: 1 hour or more
+
+2. **Normalize with OIR for comparisons**: The ratio is scale-independent
+
+3. **Check for data quality**:
+```{r data-quality}
+# Validate your data before analysis
+check_data <- function(trades) {
+  list(
+    n_rows = nrow(trades),
+    n_buys = sum(trades$side == "B"),
+    n_sells = sum(trades$side == "S"),
+    pct_buys = mean(trades$side == "B") * 100,
+    size_range = range(trades$size),
+    time_range = range(trades$timestamp)
+  )
+}
+
+check_data(trades)
+```
+
+4. **Handle sparse data carefully**: Some windows might be empty
+
+5. **Consider market hours**: Filter to regular trading hours if needed
+
+## Conclusion
+
+The `rOFI` package provides a comprehensive toolkit for order-flow analysis. Key takeaways:
+
+- **Simple interface**: Four main functions cover most use cases
+- **Flexible windows**: Calendar, rolling, or tick-based aggregation
+- **Educational focus**: Clear documentation and examples
+- **Production ready**: Efficient implementation with proper testing
+
+For more examples and updates, visit the [GitHub repository](https://github.com/DennisPoniros/rOFI_package).
+
+## Session Info
+
+```{r session}
+sessionInfo()
+```

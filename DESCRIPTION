@@ -1,0 +1,31 @@
+Package: rOFI
+Title: Compute and Visualize Order-Flow Imbalance Patterns
+Version: 0.1.0
+Authors@R: 
+    person("Dionysios", "Poniros", , "your.email@example.com", role = c("aut", "cre"))
+Description: A beginner-friendly R package for computing and visualizing order-flow 
+    imbalance (OFI) signals from trade-level data. Provides tools to calculate simple OFI, 
+    imbalance ratios, and cumulative patterns, along with functions for simulating 
+    synthetic order flow data for educational purposes.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports:
+    dplyr (>= 1.0.0),
+    tidyr (>= 1.0.0),
+    lubridate (>= 1.8.0),
+    slider (>= 0.2.0),
+    ggplot2 (>= 3.3.0),
+    rlang (>= 0.4.0),
+    tibble (>= 3.0.0)
+Suggests: 
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown,
+    quarto
+Config/testthat/edition: 3
+VignetteBuilder: knitr
+LazyData: true
+URL: https://github.com/DennisPoniros/rOFI_package
+BugReports: https://github.com/DennisPoniros/rOFI_package/issues
