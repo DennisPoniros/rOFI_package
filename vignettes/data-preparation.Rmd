@@ -1,0 +1,564 @@
+---
+title: "Data Preparation Guide"
+author: "rOFI Package"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Data Preparation Guide}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  eval = FALSE  # Don't run examples that need external files
+)
+```
+
+```{r setup}
+library(rOFI)
+```
+
+## Introduction
+
+This guide shows you how to prepare real-world trade data for analysis with `rOFI`. We'll cover:
+
+1. Understanding data requirements
+2. Loading data from various sources
+3. Handling common data issues
+4. Validating your data
+5. Format-specific guides
+
+## Data Requirements
+
+For OFI analysis, you need **trade-level data** with these minimum columns:
+
+| Column | Type | Description | Required |
+|--------|------|-------------|----------|
+| **Timestamp** | POSIXct/numeric | When the trade occurred | ✓ Yes |
+| **Side** | character/numeric | Buy or Sell | ✓ Yes |
+| **Size** | numeric | Trade size (shares/contracts) | ✓ Yes |
+| **Price** | numeric | Execution price | Optional |
+
+### Common Side Encodings
+
+`rOFI` recognizes various ways to indicate buy/sell:
+
+```{r side-encodings, eval=TRUE}
+# These all work:
+# - "B" / "S"
+# - "BUY" / "SELL"
+# - "buy" / "sell"
+# - 1 / -1 (numeric)
+# - "BID" / "ASK"
+```
+
+## Quick Data Preview
+
+Before loading large files, preview them first:
+
+```{r preview}
+# Preview any CSV file
+preview_trade_file("my_trades.csv", n_rows = 20)
+```
+
+This shows:
+- Column names and types
+- First few rows
+- Detected timestamp and side columns
+- Suggested read command
+
+## Loading Common Data Formats
+
+### 1. Simple CSV with Headers
+
+**Example file (`trades.csv`):**
+```
+timestamp,side,size,price
+2024-01-15 09:30:01,B,100,150.25
+2024-01-15 09:30:02,S,200,150.24
+2024-01-15 09:30:03,B,150,150.26
+```
+
+**Load it:**
+```{r simple-csv}
+trades <- read_trade_csv(
+  "trades.csv",
+  time_col = "timestamp",
+  side_col = "side",
+  size_col = "size",
+  price_col = "price"
+)
+```
+
+### 2. CSV Without Headers
+
+**Example file:**
+```
+1642248601,1,100,150.25
+1642248602,-1,200,150.24
+1642248603,1,150,150.26
+```
+
+**Load it:**
+```{r no-header}
+trades <- read_trade_csv(
+  "trades_noheader.csv",
+  time_col = 1,          # First column
+  side_col = 2,          # Second column
+  size_col = 3,          # Third column
+  price_col = 4,         # Fourth column
+  time_format = "unix",  # Unix timestamp
+  col_names = FALSE      # No header row
+)
+```
+
+### 3. Intraday Data (Time-Only)
+
+**Example file:**
+```
+time,direction,volume,px
+09:30:01,BUY,100,150.25
+09:30:02,SELL,200,150.24
+09:30:03,BUY,150,150.26
+```
+
+**Load it:**
+```{r intraday}
+trades <- read_trade_csv(
+  "intraday.csv",
+  time_col = "time",
+  side_col = "direction",
+  size_col = "volume",
+  price_col = "px",
+  time_format = "time_only",
+  date = "2024-01-15",  # Supply the date
+  tz = "America/New_York"
+)
+```
+
+### 4. Custom Side Labels
+
+**If your data uses non-standard labels:**
+```{r custom-sides}
+trades <- read_trade_csv(
+  "trades.csv",
+  time_col = "time",
+  side_col = "direction",
+  size_col = "quantity",
+  price_col = "price",
+  side_mapping = c(
+    "BID" = "B",
+    "ASK" = "S"
+  )
+)
+```
+
+## Academic Data Formats
+
+### LOBSTER (Limit Order Book Data)
+
+[LOBSTER](https://lobsterdata.com/) is a popular academic dataset. It provides high-frequency limit order book data.
+
+**File structure:**
+- Message file: `TICKER_DATE_START_END_message_N.csv`
+- Orderbook file: `TICKER_DATE_START_END_orderbook_N.csv`
+
+**Load LOBSTER trades:**
+```{r lobster}
+# Read AAPL trades from January 15, 2024
+trades <- read_lobster_trades(
+  file_path = "AAPL_2024-01-15_34200000_57600000_message_10.csv",
+  date = "2024-01-15",
+  tz = "America/New_York"
+)
+
+# Automatically filters to trade executions (event types 4 and 5)
+# Converts LOBSTER format to rOFI standard format
+```
+
+**What you get:**
+```{r lobster-output, eval=TRUE, echo=FALSE}
+cat("✓ Successfully loaded LOBSTER data
+  - timestamp: POSIXct in specified timezone
+  - side: 'B' or 'S'
+  - size: shares traded
+  - price: execution price
+")
+```
+
+## Data Validation
+
+Always validate your data after loading:
+
+```{r validate}
+# Comprehensive validation
+validation <- validate_trade_data(trades)
+print(validation)
+```
+
+**The validator checks for:**
+- Missing timestamps or sizes
+- Duplicate timestamps
+- Non-chronological order
+- Invalid side values
+- Negative or zero sizes/prices
+- Extreme outliers
+- Timezone consistency
+
+### Interpreting Validation Results
+
+```{r validation-interpret, eval=TRUE}
+# Example output:
+cat("
+Trade Data Validation Results
+==============================
+
+Status: FAILED
+
+Issues detected:
+  - 5 missing timestamps (0.5%)
+  - 12 duplicate timestamps (1.2%)
+  - Timestamps are not in chronological order
+  - 3 negative sizes
+
+Summary Statistics:
+  Rows: 1000
+  Time range: 2024-01-15 09:30:00 to 2024-01-15 16:00:00
+  Duration: 6.5 hours
+  Size: mean = 250.3, median = 180.0
+  Buy percentage: 52.3%
+")
+```
+
+## Data Cleaning
+
+If validation finds issues, clean your data:
+
+```{r clean}
+# Automated cleaning
+trades_clean <- clean_trade_data(
+  trades,
+  remove_outliers = TRUE,
+  remove_duplicates = TRUE,
+  outlier_method = "iqr"
+)
+
+# Check cleaning report
+attr(trades_clean, "cleaning_report")
+```
+
+**Example cleaning report:**
+```{r cleaning-report, eval=TRUE}
+cat("
+Cleaning Report:
+  Original rows: 1000
+  Removed missing: 5
+  Removed invalid size: 3
+  Removed duplicates: 12
+  Removed outliers: 8
+  Final rows: 972
+  Retention rate: 97.2%
+")
+```
+
+## Handling Time Zones
+
+Time zones are critical for multi-market analysis:
+
+```{r timezones}
+# Specify timezone when loading
+trades_nyse <- read_trade_csv(
+  "nyse_trades.csv",
+  tz = "America/New_York",
+  time_col = 1, side_col = 2, size_col = 3, price_col = 4
+)
+
+trades_london <- read_trade_csv(
+  "lse_trades.csv",
+  tz = "Europe/London",
+  time_col = 1, side_col = 2, size_col = 3, price_col = 4
+)
+
+# Convert if needed
+library(lubridate)
+trades_nyse_utc <- trades_nyse
+trades_nyse_utc$timestamp <- with_tz(trades_nyse$timestamp, "UTC")
+```
+
+## Common Data Issues & Solutions
+
+### Issue 1: Mixed Timezones
+
+```{r mixed-tz}
+# Check current timezone
+attr(trades$timestamp, "tzone")
+
+# Standardize to UTC
+library(lubridate)
+trades$timestamp <- with_tz(trades$timestamp, "UTC")
+```
+
+### Issue 2: Inconsistent Side Labels
+
+```{r inconsistent-sides}
+# Check unique values
+unique(trades$side)
+# [1] "B" "S" "BUY" "SELL"  # Mixed!
+
+# Standardize with as_ofi()
+trades <- as_ofi(
+  trades,
+  side_map = c(
+    "B" = "B", "BUY" = "B",
+    "S" = "S", "SELL" = "S"
+  )
+)
+```
+
+### Issue 3: Large Files
+
+```{r large-files}
+# Read in chunks for very large files
+library(readr)
+
+# Method 1: Use data.table for speed
+library(data.table)
+trades <- fread("huge_file.csv")
+trades <- as.data.frame(trades)  # Convert to data frame
+
+# Method 2: Use arrow for out-of-memory processing
+library(arrow)
+trades <- read_csv_arrow("huge_file.csv")
+```
+
+### Issue 4: Missing Prices
+
+```{r missing-prices}
+# OFI doesn't require prices for basic analysis
+trades_no_price <- trades[, c("timestamp", "side", "size")]
+
+# This works fine:
+ofi <- compute_ofi(trades_no_price, window = "1 min")
+
+# But you can't use price_weighted = TRUE
+```
+
+## Data Quality Checklist
+
+Before running OFI analysis, verify:
+
+```{r checklist, eval=TRUE}
+cat("
+✓ Data Quality Checklist:
+
+1. [ ] All required columns present (timestamp, side, size)
+2. [ ] Timestamps are POSIXct with correct timezone
+3. [ ] Side values are 'B' or 'S' (or will be mapped)
+4. [ ] No missing values in critical columns
+5. [ ] Timestamps are chronologically ordered
+6. [ ] No negative or zero sizes
+7. [ ] Data covers expected time period
+8. [ ] Outliers identified and handled
+9. [ ] Duplicate timestamps resolved
+10. [ ] Sample data looks reasonable
+")
+```
+
+## Complete Example Workflow
+
+```{r complete-example}
+# 1. Preview the file
+preview_trade_file("my_data.csv")
+
+# 2. Load with appropriate settings
+trades_raw <- read_trade_csv(
+  "my_data.csv",
+  time_col = "timestamp",
+  side_col = "side",
+  size_col = "volume",
+  price_col = "price",
+  tz = "America/New_York"
+)
+
+# 3. Validate
+validation <- validate_trade_data(trades_raw)
+print(validation)
+
+# 4. Clean if needed
+if (!validation$valid) {
+  trades <- clean_trade_data(trades_raw)
+} else {
+  trades <- trades_raw
+}
+
+# 5. Verify cleaned data
+validate_trade_data(trades)
+
+# 6. Ready for analysis!
+ofi <- compute_ofi(trades, window = "1 min")
+plot_ofi(ofi)
+```
+
+## Format-Specific Guides
+
+### Bloomberg Terminal Export
+
+Bloomberg data typically exports as:
+```
+Time,Side,Size,Price
+09:30:01,BID,100,150.25
+09:30:02,ASK,200,150.24
+```
+
+```{r bloomberg}
+trades <- read_trade_csv(
+  "bloomberg_export.csv",
+  time_col = "Time",
+  side_col = "Side",
+  size_col = "Size",
+  price_col = "Price",
+  time_format = "time_only",
+  date = "2024-01-15",
+  tz = "America/New_York",
+  side_mapping = c("BID" = "B", "ASK" = "S")
+)
+```
+
+### Interactive Brokers (IB)
+
+IB TWS exports often use:
+```
+Date,Time,Type,Size,Price
+2024-01-15,09:30:01,BOT,100,150.25
+2024-01-15,09:30:02,SLD,200,150.24
+```
+
+```{r ib}
+# Read and combine date+time
+ib_data <- read.csv("ib_trades.csv")
+
+# Create combined timestamp
+library(lubridate)
+ib_data$timestamp <- ymd_hms(
+  paste(ib_data$Date, ib_data$Time),
+  tz = "America/New_York"
+)
+
+# Standardize
+trades <- as_ofi(
+  ib_data,
+  time_col = "timestamp",
+  side_col = "Type",
+  size_col = "Size",
+  price_col = "Price",
+  side_map = c("BOT" = "B", "SLD" = "S")
+)
+```
+
+## Troubleshooting
+
+### Error: "Could not parse datetime"
+
+```{r parse-error}
+# Try specifying custom format
+# For "15/01/2024 09:30:01" format:
+trades <- read_trade_csv(
+  file,
+  time_col = "timestamp",
+  time_format = "datetime",  # Will try multiple formats
+  # ...
+)
+
+# If that fails, parse manually:
+data <- read.csv(file)
+library(lubridate)
+data$timestamp <- dmy_hms(data$time_column, tz = "America/New_York")
+trades <- as_ofi(data)
+```
+
+### Error: "Unknown side value"
+
+```{r side-error}
+# Check what values are in your data
+unique(your_data$side_column)
+
+# Provide explicit mapping
+trades <- read_trade_csv(
+  file,
+  side_mapping = c(
+    "YOUR_BUY_VALUE" = "B",
+    "YOUR_SELL_VALUE" = "S"
+  )
+)
+```
+
+### Warning: "X rows with missing timestamps"
+
+```{r missing-error}
+# Option 1: Remove missing rows (automatic with clean_trade_data)
+trades <- clean_trade_data(raw_data)
+
+# Option 2: Investigate why they're missing
+missing_idx <- which(is.na(raw_data$timestamp))
+problem_rows <- raw_data[missing_idx, ]
+View(problem_rows)
+```
+
+## Best Practices
+
+1. **Always preview first**: Use `preview_trade_file()` before loading large files
+
+2. **Validate early**: Run `validate_trade_data()` immediately after loading
+
+3. **Keep raw data**: Save original data separate from cleaned data
+   ```{r best-practice}
+   trades_raw <- read_trade_csv("data.csv")
+   trades_clean <- clean_trade_data(trades_raw)
+   # Keep both!
+   ```
+
+4. **Document your cleaning**: Record what changes were made
+   ```{r document}
+   cleaning_report <- attr(trades_clean, "cleaning_report")
+   saveRDS(cleaning_report, "cleaning_log.rds")
+   ```
+
+5. **Check sample periods**: Verify data makes sense
+   ```{r sample-check}
+   # Check first hour
+   first_hour <- trades[1:100, ]
+   summary(first_hour)
+
+   # Visualize sample
+   sample_ofi <- compute_ofi(first_hour, window = "1 min")
+   plot_ofi(sample_ofi)
+   ```
+
+## Getting Help
+
+If you're stuck:
+
+```{r help}
+# Function help
+?read_trade_csv
+?read_lobster_trades
+?validate_trade_data
+
+# Report data loading issues
+# https://github.com/DennisPoniros/rOFI_package/issues
+```
+
+## Summary
+
+**Key Steps:**
+1. **Preview** your data file
+2. **Load** with appropriate format settings
+3. **Validate** to catch issues
+4. **Clean** problematic data
+5. **Verify** cleaned data looks good
+6. **Analyze** with confidence!
+
+Happy data wrangling! 📁➡️📊

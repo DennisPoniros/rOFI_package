@@ -23,6 +23,12 @@
 - ✅ **Data Quality Tools**: Comprehensive validation, outlier detection, and automated cleaning
 - 📊 **Statistical Testing**: Autocorrelation tests, lead-lag analysis, and bootstrap significance testing
 - 🔬 **Market Microstructure Models**: Kyle's lambda, price impact decomposition, VPIN, and spread analysis
+- 📁 **Data Import**: LOBSTER academic format, generic CSV, flexible column mapping, and validation
+
+### Learning Resources
+- 📚 **Comprehensive Vignettes**: Step-by-step guides from beginner to advanced
+- 💡 **Detailed Examples**: Every function includes working examples
+- ✨ **User-Friendly**: Clear error messages and helpful validation feedback
 
 ## Installation
 
@@ -52,6 +58,34 @@ ofi <- compute_ofi(trades, window = "1 min")
 # Visualize the results
 plot_ofi(ofi)
 ```
+
+## Loading Your Own Data
+
+```r
+# From CSV files
+trades <- read_trade_csv(
+  "my_trades.csv",
+  time_col = "timestamp",
+  side_col = "side",
+  size_col = "volume",
+  price_col = "price"
+)
+
+# From LOBSTER academic format
+trades <- read_lobster_trades(
+  "AAPL_2024-01-15_message.csv",
+  date = "2024-01-15"
+)
+
+# Preview before loading
+preview_trade_file("my_data.csv")  # See structure first
+
+# Validate your data
+validation <- validate_trade_data(trades)
+print(validation)
+```
+
+See the **"Data Preparation"** vignette for detailed guides on loading data from various sources.
 
 ## Core Functions
 
@@ -301,6 +335,64 @@ The `as_ofi()` function handles various formats and encodings automatically.
 - Rolling windows are computationally intensive; use sparingly on big data
 - The package uses `dplyr` for efficient grouped operations
 - Parallel processing can be added for very large datasets using `furrr`
+
+## Learning Resources
+
+`rOFI` includes comprehensive documentation to support your learning journey:
+
+### Vignettes (Recommended Reading Order)
+
+1. **Introduction to OFI** (`vignette("introduction-to-ofi", package = "rOFI")`)
+   - Perfect for beginners
+   - What is Order-Flow Imbalance?
+   - Your first OFI analysis
+   - Understanding the metrics
+   - Common use cases
+
+2. **Data Preparation Guide** (`vignette("data-preparation", package = "rOFI")`)
+   - Loading data from various sources
+   - LOBSTER academic format
+   - Generic CSV files
+   - Data validation and cleaning
+   - Troubleshooting common issues
+
+3. **Getting Started** (`vignette("getting-started", package = "rOFI")`)
+   - Complete workflows
+   - Advanced features
+   - Market regime detection
+   - Performance considerations
+
+### Function Documentation
+
+Every function has detailed documentation with examples:
+
+```r
+?compute_ofi              # Core OFI calculation
+?read_trade_csv           # Data import
+?validate_trade_data      # Data quality
+?kyle_lambda_estimation   # Market microstructure
+?test_ofi_autocorrelation # Statistical tests
+```
+
+### Quick Reference
+
+```r
+# See all available functions
+library(help = "rOFI")
+
+# Package overview
+?rOFI
+
+# List all vignettes
+browseVignettes("rOFI")
+```
+
+### Getting Help
+
+- 📖 Read the vignettes (start with "introduction-to-ofi")
+- 💬 Check function documentation with `?function_name`
+- 🐛 Report issues: https://github.com/DennisPoniros/rOFI_package/issues
+- 📧 Questions: See DESCRIPTION file for maintainer contact
 
 ## Contributing
 

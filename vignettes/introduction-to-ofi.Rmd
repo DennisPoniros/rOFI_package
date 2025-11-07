@@ -1,0 +1,321 @@
+---
+title: "Introduction to Order-Flow Imbalance (OFI)"
+author: "rOFI Package"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to Order-Flow Imbalance (OFI)}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## What is Order-Flow Imbalance?
+
+If you're new to market microstructure or quantitative finance, welcome! This guide will introduce you to **Order-Flow Imbalance (OFI)** - a powerful concept for understanding how buy and sell pressure affects prices.
+
+### The Basic Idea
+
+Imagine a simple market where people are buying and selling a stock:
+
+- When there are **more buyers** than sellers → price tends to go **up**
+- When there are **more sellers** than buyers → price tends to go **down**
+
+**Order-Flow Imbalance** measures this buying vs. selling pressure by looking at actual trades.
+
+### A Simple Analogy
+
+Think of OFI like a tug-of-war:
+
+```
+Sellers ←--------●--------→ Buyers
+        (negative OFI)  (positive OFI)
+```
+
+- **Positive OFI**: More buying pressure (rope pulled toward buyers)
+- **Negative OFI**: More selling pressure (rope pulled toward sellers)
+- **Zero OFI**: Balanced (no one winning)
+
+## Installing and Loading rOFI
+
+```{r setup, eval=FALSE}
+# Install from GitHub (if not already installed)
+# devtools::install_github("DennisPoniros/rOFI_package")
+
+# Load the package
+library(rOFI)
+```
+
+```{r actual-setup, include=FALSE}
+library(rOFI)
+```
+
+## Your First OFI Analysis
+
+Let's start with a complete example from data generation to visualization.
+
+### Step 1: Generate Some Trade Data
+
+Since you might not have real market data yet, `rOFI` can create realistic synthetic data:
+
+```{r generate-data}
+# Generate 1000 trades with slight buying pressure
+trades <- simulate_orders(
+  n = 1000,           # Number of trades
+  imb = 0.1,         # 10% more buys than sells
+  seed = 123          # For reproducibility
+)
+
+# Look at the first few trades
+head(trades)
+```
+
+Each trade has:
+- `timestamp`: When the trade happened
+- `side`: "B" for buy, "S" for sell
+- `size`: How many shares traded
+- `price`: Execution price
+
+### Step 2: Calculate OFI
+
+Now let's measure the order flow imbalance over 1-minute windows:
+
+```{r compute-ofi}
+# Compute OFI in 1-minute windows
+ofi_1min <- compute_ofi(trades, window = "1 min")
+
+# Look at the results
+head(ofi_1min)
+```
+
+The output contains:
+- `window_start`: Start of each time window
+- `ofi`: Buy volume - Sell volume (the main metric!)
+- `oir`: Order imbalance ratio (normalized to -1 to 1)
+- `B`: Total buy volume
+- `S`: Total sell volume
+- `vol_total`: Total volume
+- `n_trades`: Number of trades
+
+### Step 3: Visualize the Results
+
+```{r plot-ofi, fig.height=6}
+# Plot the OFI over time
+plot_ofi(ofi_1min, which = "ofi")
+```
+
+**What am I looking at?**
+
+- **Positive values**: More buying than selling (bullish pressure)
+- **Negative values**: More selling than buying (bearish pressure)
+- **Trend**: Is buying/selling pressure increasing or decreasing?
+
+## Understanding OFI Metrics
+
+`rOFI` calculates several related metrics. Here's what they mean:
+
+### 1. OFI (Order-Flow Imbalance)
+
+**Formula**: `OFI = Buy Volume - Sell Volume`
+
+**Example**: If buyers trade 10,000 shares and sellers trade 7,000 shares:
+```
+OFI = 10,000 - 7,000 = 3,000 (positive → buying pressure)
+```
+
+### 2. OIR (Order Imbalance Ratio)
+
+**Formula**: `OIR = (Buy - Sell) / (Buy + Sell)`
+
+**Range**: -1 to +1
+
+**Example**: With 10,000 buy and 7,000 sell:
+```
+OIR = (10,000 - 7,000) / (10,000 + 7,000) = 3,000 / 17,000 ≈ 0.176
+```
+
+**Why use OIR?**
+- Normalized (always between -1 and 1)
+- Easier to compare across different stocks or time periods
+- Less affected by overall volume changes
+
+### 3. Cumulative OFI
+
+**Formula**: `Sum of all OFI values up to current time`
+
+**Purpose**: Shows the overall trend
+
+```{r plot-cumulative, fig.height=6}
+plot_ofi(ofi_1min, which = "ofi_cum")
+```
+
+**Interpretation**:
+- **Rising**: Persistent buying pressure
+- **Falling**: Persistent selling pressure
+- **Flat**: Balanced market
+
+## Different Time Windows
+
+You can analyze OFI at different time scales:
+
+```{r different-windows}
+# Fast (30 seconds)
+ofi_30sec <- compute_ofi(trades, window = "30 sec")
+
+# Medium (1 minute) - we already did this
+# ofi_1min <- compute_ofi(trades, window = "1 min")
+
+# Slow (5 minutes)
+ofi_5min <- compute_ofi(trades, window = "5 min")
+
+# Compare number of windows
+cat("30-second windows:", nrow(ofi_30sec), "\n")
+cat("1-minute windows:", nrow(ofi_1min), "\n")
+cat("5-minute windows:", nrow(ofi_5min), "\n")
+```
+
+**Trade-off**:
+- **Shorter windows** → More responsive, but noisier
+- **Longer windows** → Smoother, but slower to react
+
+## Common Use Cases
+
+### 1. Detecting Market Pressure
+
+```{r pressure-example}
+# Find windows with strong buying pressure
+strong_buying <- ofi_1min[ofi_1min$oir > 0.3, ]
+cat("Found", nrow(strong_buying), "periods with strong buying (OIR > 0.3)\n")
+
+# Find windows with strong selling pressure
+strong_selling <- ofi_1min[ofi_1min$oir < -0.3, ]
+cat("Found", nrow(strong_selling), "periods with strong selling (OIR < -0.3)\n")
+```
+
+### 2. Trend Analysis
+
+```{r trend-analysis}
+# Is buying pressure increasing over time?
+recent_avg <- mean(tail(ofi_1min$ofi, 10))
+early_avg <- mean(head(ofi_1min$ofi, 10))
+
+cat("Early OFI average:", round(early_avg, 2), "\n")
+cat("Recent OFI average:", round(recent_avg, 2), "\n")
+
+if (recent_avg > early_avg) {
+  cat("→ Buying pressure is INCREASING\n")
+} else {
+  cat("→ Selling pressure is INCREASING\n")
+}
+```
+
+### 3. Distribution Analysis
+
+```{r distribution, fig.height=5}
+# How is OFI distributed?
+plot_ofi_dist(ofi_1min, metric = "oir", plot_type = "histogram")
+```
+
+**What to look for**:
+- **Centered at zero**: Balanced market
+- **Skewed positive**: More buying pressure overall
+- **Skewed negative**: More selling pressure overall
+- **Wide spread**: High variability in order flow
+
+## Working with Your Own Data
+
+When you have real market data, use `as_ofi()` to standardize it:
+
+```{r own-data-example, eval=FALSE}
+# Example with your own data
+my_trades <- data.frame(
+  timestamp = Sys.time() + 1:100,
+  side = sample(c("B", "S"), 100, replace = TRUE),
+  size = runif(100, 100, 1000),
+  price = 100 + cumsum(rnorm(100, 0, 0.1))
+)
+
+# Standardize for rOFI
+clean_data <- as_ofi(my_trades)
+
+# Now compute OFI
+ofi <- compute_ofi(clean_data, window = "1 min")
+```
+
+## Next Steps
+
+Now that you understand the basics:
+
+1. **Read the "Getting Started" vignette** for more advanced features
+2. **Read the "Data Preparation" vignette** for loading real data
+3. **Experiment** with different window sizes and parameters
+4. **Explore** the statistical testing functions (autocorrelation, lead-lag analysis)
+
+## Quick Reference
+
+### Basic Workflow
+
+```{r quick-ref, eval=FALSE}
+# 1. Load/generate data
+trades <- simulate_orders(n = 1000, seed = 123)
+
+# 2. Compute OFI
+ofi <- compute_ofi(trades, window = "1 min")
+
+# 3. Visualize
+plot_ofi(ofi)
+
+# 4. Analyze
+summary(ofi$oir)
+```
+
+### Common Parameters
+
+```{r params-ref, eval=FALSE}
+# Calendar windows
+compute_ofi(trades, window = "1 min")   # 1 minute
+compute_ofi(trades, window = "5 min")   # 5 minutes
+compute_ofi(trades, window = "1 hour")  # 1 hour
+
+# Tick-based (every N trades)
+compute_ofi(trades, n_ticks = 100)      # Every 100 trades
+
+# With price weighting
+compute_ofi(trades, window = "1 min", price_weighted = TRUE)
+```
+
+## Getting Help
+
+If you encounter issues:
+
+```{r help, eval=FALSE}
+# Function documentation
+?compute_ofi
+?plot_ofi
+
+# Package overview
+?rOFI
+
+# Report bugs
+# https://github.com/DennisPoniros/rOFI_package/issues
+```
+
+## Summary
+
+**Key Takeaways:**
+
+1. **OFI measures buying vs. selling pressure**
+2. **Positive OFI = more buying; Negative OFI = more selling**
+3. **Use different time windows** for different trading styles
+4. **OIR normalizes OFI** to a -1 to +1 scale
+5. **Cumulative OFI shows overall trend**
+
+Happy analyzing! 📊
