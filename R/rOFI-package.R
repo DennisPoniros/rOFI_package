@@ -427,7 +427,6 @@
 #'   \item Examples: \code{rofi_examples()}
 #' }
 #'
-#' @docType package
 #' @name rOFI
 #' @import dplyr
 #' @import ggplot2
@@ -435,20 +434,6 @@
 #' @importFrom lubridate floor_date is.POSIXct with_tz seconds dseconds
 #' @importFrom tidyr pivot_longer replace_na
 #' @importFrom slider slide_period_dbl slide_index_dbl
-#' @importFrom stats rexp rbinom rlnorm rnorm cumsum median
+#' @importFrom stats rexp rbinom rlnorm rnorm median
 #' @importFrom rlang .data := !! sym
-NULL
-
-#' Sample order flow data
-#'
-#' A dataset containing simulated trade-level events for demonstration purposes.
-#'
-#' @format A tibble with 1000 rows and 4 variables:
-#' \describe{
-#'   \item{timestamp}{POSIXct timestamp of the trade}
-#'   \item{side}{Character, "B" for buy or "S" for sell}
-#'   \item{size}{Numeric, number of shares/contracts traded}
-#'   \item{price}{Numeric, execution price}
-#' }
-#' @source Generated using \code{simulate_orders()} with seed = 42
-"ofi_demo"
+"_PACKAGE"
