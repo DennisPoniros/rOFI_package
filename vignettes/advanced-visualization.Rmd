@@ -1,0 +1,496 @@
+---
+title: "Advanced Visualization Dashboard"
+author: "rOFI Package"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Advanced Visualization Dashboard}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 8,
+  fig.height = 6,
+  fig.align = "center",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+## Introduction
+
+The **rOFI** package provides publication-quality visualizations designed for statisticians, quantitative researchers, and market microstructure analysts. This vignette demonstrates advanced plotting capabilities that go beyond basic time series plots to include:
+
+- **Diagnostic dashboards** with ACF/PACF and Q-Q plots
+- **Time series decomposition** into trend, seasonal, and irregular components
+- **Market quality dashboards** showing liquidity and efficiency metrics
+- **Regime detection** for identifying market states
+- **Comparative analysis** across multiple assets or periods
+- **Publication-ready themes** for academic papers
+
+All visualizations emphasize statistical rigor with proper confidence bands, hypothesis tests, and professional defaults suitable for presentations and publications.
+
+## Setup
+
+```{r libraries}
+library(rOFI)
+library(patchwork)  # Required for multi-panel layouts
+library(ggplot2)
+library(dplyr)
+```
+
+## Generate Sample Data
+
+We'll create realistic order flow data with different market conditions:
+
+```{r generate_data}
+set.seed(42)
+
+# Balanced market (neutral order flow)
+trades_balanced <- simulate_orders(
+  n = 2000,
+  start = as.POSIXct("2024-01-15 09:30:00", tz = "America/New_York"),
+  lambda = 10,    # 10 trades per minute
+  imb = 0,        # No imbalance
+  drift = 0,
+  vol = 0.15,
+  seed = 42
+)
+
+# Bullish market (buy pressure)
+trades_bullish <- simulate_orders(
+  n = 2000,
+  start = as.POSIXct("2024-01-15 09:30:00", tz = "America/New_York"),
+  lambda = 10,
+  imb = 0.3,      # 30% more buys
+  drift = 0.5,    # Upward price drift
+  vol = 0.15,
+  seed = 43
+)
+
+# High volatility market (stress conditions)
+trades_volatile <- simulate_orders(
+  n = 2000,
+  start = as.POSIXct("2024-01-15 09:30:00", tz = "America/New_York"),
+  lambda = 20,    # Higher trading intensity
+  imb = 0.1,
+  drift = 0,
+  vol = 0.40,     # High volatility
+  seed = 44
+)
+
+# Compute OFI for each scenario
+ofi_balanced <- compute_ofi(trades_balanced, window = "1 min")
+ofi_bullish <- compute_ofi(trades_bullish, window = "1 min")
+ofi_volatile <- compute_ofi(trades_volatile, window = "1 min")
+```
+
+## 1. Diagnostic Dashboard
+
+The `plot_ofi_diagnostics()` function creates a comprehensive 6-panel diagnostic dashboard perfect for statistical analysis:
+
+```{r diagnostics, fig.width=10, fig.height=10}
+plot_ofi_diagnostics(
+  ofi_bullish,
+  metric = "oir",
+  max_lag = 20,
+  conf_level = 0.95,
+  title = "OFI Diagnostic Dashboard: Bullish Market"
+)
+```
+
+### What the Panels Show
+
+1. **Time Series with Trend**: Raw OIR values with LOESS smoothing to identify trends
+2. **ACF (Autocorrelation)**: Shows persistence in order flow imbalance
+3. **PACF (Partial Autocorrelation)**: Identifies direct lagged relationships
+4. **Q-Q Plot**: Tests normality assumption (departures indicate fat tails)
+5. **Distribution**: Histogram with density overlay and mean reference line
+6. **Summary Statistics**: Key moments (mean, SD, skewness, kurtosis)
+
+### Interpretation
+
+- **Significant ACF at multiple lags** indicates persistent order flow patterns (momentum)
+- **Negative skewness** suggests more extreme sell-side imbalances
+- **Excess kurtosis** (fat tails) indicates occasional extreme imbalances
+- **Q-Q plot departures** at tails show non-normality (common in financial data)
+
+This diagnostic suite helps researchers:
+- Test assumptions for econometric models
+- Identify appropriate lag structures for forecasting
+- Detect anomalies and outliers
+- Understand distributional properties
+
+## 2. Time Series Decomposition
+
+Decompose OFI into trend, seasonal (intraday patterns), and irregular components:
+
+```{r decomposition, fig.width=8, fig.height=8}
+plot_ofi_decomposition(
+  ofi_balanced,
+  metric = "oir",
+  freq = NULL  # Auto-detect frequency
+)
+```
+
+### Use Cases
+
+- **Trend component**: Identifies sustained directional pressure
+- **Seasonal component**: Reveals intraday patterns (opening/closing effects)
+- **Remainder**: Isolates idiosyncratic order flow shocks
+
+This is particularly useful for:
+- Filtering out predictable patterns before forecasting
+- Identifying structural breaks in market behavior
+- Understanding time-of-day effects in execution
+
+## 3. Market Quality Dashboard
+
+Comprehensive view of market conditions combining volume, imbalance, spreads, and volatility:
+
+```{r market_quality, fig.width=10, fig.height=8}
+plot_market_quality(
+  trades_volatile,
+  window = "5 min",
+  title = "Market Quality: High Volatility Period"
+)
+```
+
+### Key Metrics
+
+1. **Trading Volume**: Liquidity and activity level
+2. **Order Imbalance Ratio**: Buy/sell pressure
+3. **Spread Proxy**: Transaction cost estimate
+4. **Price Volatility**: Risk and uncertainty
+
+### Interpretation
+
+- **Simultaneous spikes** in volume and volatility indicate news arrival
+- **High OIR with expanding spreads** suggests informed trading
+- **Low volume with high spreads** indicates illiquidity
+- **High volatility with balanced OIR** suggests noise traders
+
+Market makers and execution desks use these dashboards for:
+- Real-time risk management
+- Optimal execution timing
+- Spread adjustment decisions
+- Regulatory surveillance
+
+## 4. Regime Detection
+
+Identify distinct market states using statistical clustering:
+
+```{r regime_quantile, fig.width=10, fig.height=6}
+# Quantile-based regimes (simple thresholds)
+plot_regime_detection(
+  ofi_bullish,
+  method = "quantile",
+  n_regimes = 3
+)
+```
+
+```{r regime_kmeans, fig.width=10, fig.height=6}
+# K-means clustering (multivariate)
+plot_regime_detection(
+  ofi_bullish,
+  method = "kmeans",
+  n_regimes = 3,
+  vars = c("oir", "vol_total")
+)
+```
+
+### Methods
+
+- **Quantile**: Simple threshold-based regimes (low/medium/high imbalance)
+- **K-means**: Multivariate clustering on OFI and volume
+- **HMM** (planned): Hidden Markov Models for state transitions
+
+### Applications
+
+- **Regime-dependent trading strategies**: Different algorithms for different states
+- **Risk management**: Increase caution in extreme regimes
+- **Model selection**: Use regime-specific forecasting models
+- **Stress testing**: Analyze performance across regimes
+
+Academic research uses regime detection for:
+- Testing market microstructure theories in different states
+- Analyzing high-frequency trader behavior by regime
+- Studying market maker inventory management
+
+## 5. Comparative Analysis
+
+Compare OFI patterns across multiple assets, time periods, or market conditions:
+
+```{r comparative_facet, fig.width=10, fig.height=10}
+# Faceted comparison (separate panels)
+plot_comparative_analysis(
+  ofi_list = list(
+    "Balanced Market" = ofi_balanced,
+    "Bullish Market" = ofi_bullish,
+    "High Volatility" = ofi_volatile
+  ),
+  metric = "oir",
+  layout = "facet",
+  normalize = FALSE
+)
+```
+
+### With Standardization
+
+For comparing markets with different scales:
+
+```{r comparative_normalized, fig.width=10, fig.height=10}
+plot_comparative_analysis(
+  ofi_list = list(
+    "Balanced" = ofi_balanced,
+    "Bullish" = ofi_bullish,
+    "Volatile" = ofi_volatile
+  ),
+  metric = "oir",
+  layout = "facet",
+  normalize = TRUE  # Z-score standardization
+)
+```
+
+### Overlay Comparison
+
+```{r comparative_overlay, fig.width=10, fig.height=6}
+# Overlay on single plot (best for normalized data)
+plot_comparative_analysis(
+  ofi_list = list(
+    "Balanced" = ofi_balanced,
+    "Bullish" = ofi_bullish
+  ),
+  metric = "oir",
+  layout = "overlay",
+  normalize = TRUE
+)
+```
+
+### Use Cases
+
+**Cross-sectional studies**:
+- Compare OFI across stocks (tech vs. finance vs. energy)
+- Analyze ETF vs. constituent patterns
+- Study futures vs. spot markets
+
+**Temporal comparisons**:
+- Pre-market vs. regular hours vs. after-hours
+- Compare same stock across different dates
+- Analyze before/after major news events
+
+**Market condition studies**:
+- Bull markets vs. bear markets
+- High vs. low volatility regimes
+- Liquid vs. illiquid periods
+
+## 6. Publication-Ready Theme
+
+The `theme_publication()` creates clean, professional plots suitable for academic papers:
+
+```{r publication_theme, fig.width=8, fig.height=5}
+# Apply to any plot
+plot_ofi(ofi_bullish, which = "oir") +
+  theme_publication() +
+  labs(
+    title = "Order Imbalance Ratio: Bullish Market Conditions",
+    subtitle = "1-minute aggregation windows"
+  )
+```
+
+### Theme Features
+
+- **Minimalist design**: Removes visual clutter
+- **Bold titles and axis labels**: Ensures readability
+- **Clean grid lines**: Subtle major grid only
+- **Professional fonts**: Compatible with journal requirements
+- **Optimal spacing**: Publication-ready margins
+
+### Customization
+
+```{r publication_custom, fig.width=8, fig.height=5}
+plot_ofi(ofi_balanced, which = c("ofi", "ofi_cum")) +
+  theme_publication(base_size = 12) +
+  labs(title = "Order Flow Imbalance Patterns") +
+  scale_color_viridis_d()  # Colorblind-friendly palette
+```
+
+## 7. Creating Custom Dashboards
+
+Combine multiple visualizations using `patchwork`:
+
+```{r custom_dashboard, fig.width=12, fig.height=10}
+# Create individual plots
+p1 <- plot_ofi(ofi_bullish, which = "oir") +
+  theme_publication() +
+  labs(title = "A. Order Imbalance Ratio")
+
+p2 <- plot_ofi_dist(ofi_bullish, metric = "oir", plot_type = "density") +
+  theme_publication() +
+  labs(title = "B. OIR Distribution")
+
+p3 <- plot_regime_detection(ofi_bullish, method = "quantile", n_regimes = 3) +
+  theme_publication() +
+  labs(title = "C. Market Regimes")
+
+# Combine into custom layout
+(p1 | p2) / p3 +
+  plot_annotation(
+    title = "Comprehensive OFI Analysis Dashboard",
+    subtitle = "Bullish Market Conditions - January 15, 2024",
+    theme = theme(plot.title = element_text(face = "bold", size = 16))
+  )
+```
+
+## 8. Complete Analysis Workflow
+
+Here's a complete analysis workflow for a research paper:
+
+```{r workflow, fig.width=12, fig.height=10}
+# 1. Load or generate data
+trades <- simulate_orders(n = 3000, imb = 0.15, seed = 123)
+ofi <- compute_ofi(trades, window = "1 min")
+
+# 2. Initial exploratory plots
+p_timeseries <- plot_ofi(ofi, which = c("ofi", "oir", "ofi_cum")) +
+  theme_publication()
+
+# 3. Statistical diagnostics (use separately)
+# diagnostics <- plot_ofi_diagnostics(ofi, metric = "oir", max_lag = 20)
+
+# 4. Test for statistical significance
+acf_test <- test_ofi_autocorrelation(ofi, max_lag = 20)
+print(paste("Box-Ljung test p-value:", round(acf_test$p_value, 4)))
+
+# 5. Regime analysis
+p_regime <- plot_regime_detection(ofi, method = "kmeans", n_regimes = 3)
+
+# 6. Distribution analysis
+p_dist <- plot_ofi_dist(ofi, metric = "oir", plot_type = "histogram") +
+  theme_publication()
+
+# Show subset of workflow
+p_timeseries
+```
+
+## Best Practices for Research
+
+### For Statistical Analysis
+
+1. **Always check diagnostics first**: Use `plot_ofi_diagnostics()` before modeling
+2. **Test assumptions**: Q-Q plots for normality, ACF for independence
+3. **Report confidence bands**: All plots include proper statistical bounds
+4. **Document data quality**: Use validation functions before visualization
+
+### For Publications
+
+1. **Use `theme_publication()`**: Ensures consistent professional appearance
+2. **Include sample sizes**: Add N to plot annotations
+3. **Report test statistics**: Combine plots with statistical test results
+4. **Use colorblind-safe palettes**: Default colors are accessibility-friendly
+5. **Export high-resolution**: Use `ggsave()` with at least 300 DPI
+
+```{r export_example, eval=FALSE}
+# Export for publication
+p <- plot_ofi_diagnostics(ofi, metric = "oir")
+
+ggsave(
+  filename = "ofi_diagnostics.pdf",
+  plot = p,
+  width = 10,
+  height = 10,
+  dpi = 300
+)
+```
+
+### For Trading/Risk Management
+
+1. **Monitor market quality**: Use `plot_market_quality()` for real-time dashboards
+2. **Detect regime changes**: Update execution strategies based on regimes
+3. **Compare across assets**: Use `plot_comparative_analysis()` for pairs trading
+4. **Track historical patterns**: Decompose to separate trend from noise
+
+## Advanced Customization
+
+All plots return `ggplot2` objects and can be further customized:
+
+```{r advanced_custom, fig.width=8, fig.height=5}
+plot_ofi(ofi_bullish, which = "oir") +
+  # Add custom reference lines
+  geom_hline(yintercept = c(-0.3, 0.3),
+             linetype = "dashed",
+             color = "red",
+             alpha = 0.6) +
+  # Annotate important events
+  annotate("rect",
+           xmin = min(ofi_bullish$window_start) + 30*60,
+           xmax = min(ofi_bullish$window_start) + 60*60,
+           ymin = -Inf, ymax = Inf,
+           alpha = 0.2, fill = "yellow") +
+  annotate("text",
+           x = min(ofi_bullish$window_start) + 45*60,
+           y = 0.5,
+           label = "News Event",
+           angle = 90,
+           size = 3) +
+  # Apply publication theme
+  theme_publication() +
+  # Custom colors
+  scale_color_manual(values = c("#1f77b4")) +
+  # Labels
+  labs(
+    title = "Order Flow Analysis with Event Annotation",
+    subtitle = "Highlighted period: 30-60 minutes after open"
+  )
+```
+
+## Summary
+
+The **rOFI** visualization dashboard provides:
+
+✅ **Statistical rigor**: Proper confidence bands, diagnostic tests, and decompositions
+✅ **Publication quality**: Professional themes and high-resolution export
+✅ **Comprehensive analysis**: From diagnostics to regime detection to comparisons
+✅ **Flexibility**: Full ggplot2 compatibility for customization
+✅ **Practical utility**: Tools for both research and trading applications
+
+### Key Functions
+
+| Function | Purpose |
+|----------|---------|
+| `plot_ofi_diagnostics()` | 6-panel statistical dashboard (ACF, PACF, Q-Q, distribution) |
+| `plot_ofi_decomposition()` | Trend/seasonal/irregular decomposition |
+| `plot_market_quality()` | Volume, spreads, volatility, imbalance dashboard |
+| `plot_regime_detection()` | Identify market states with clustering |
+| `plot_comparative_analysis()` | Compare multiple assets/periods |
+| `theme_publication()` | Professional theme for papers |
+
+### Next Steps
+
+- **Explore microstructure models**: See `vignette("getting-started")` for Kyle's lambda, VPIN, and spread analysis
+- **Advanced OFI calculations**: Learn about EWMA, momentum, and acceleration in the introductory vignette
+- **Data import**: Check `vignette("data-preparation")` for loading real market data
+- **Statistical testing**: Use `test_ofi_autocorrelation()` and `ofi_lead_lag_analysis()` for rigorous hypothesis testing
+
+## References
+
+### Market Microstructure
+- Cont, R., Kukanov, A., & Stoikov, S. (2014). "The Price Impact of Order Book Events." *Journal of Financial Econometrics*, 12(1), 47-88.
+- Cartea, Á., Jaimungal, S., & Penalva, J. (2015). *Algorithmic and High-Frequency Trading*. Cambridge University Press.
+
+### Time Series Decomposition
+- Cleveland, R. B., Cleveland, W. S., McRae, J. E., & Terpenning, I. (1990). "STL: A Seasonal-Trend Decomposition Procedure Based on Loess." *Journal of Official Statistics*, 6(1), 3-73.
+
+### Visualization Best Practices
+- Tufte, E. R. (2001). *The Visual Display of Quantitative Information*. Graphics Press.
+- Wilke, C. O. (2019). *Fundamentals of Data Visualization*. O'Reilly Media.
+
+---
+
+**Package**: rOFI
+**License**: MIT
+**GitHub**: https://github.com/DennisPoniros/rOFI_package

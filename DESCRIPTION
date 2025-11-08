@@ -21,8 +21,11 @@ Imports:
     rlang (>= 0.4.0),
     tibble (>= 3.0.0),
     zoo (>= 1.8.0),
-    readr (>= 2.0.0)
-Suggests: 
+    readr (>= 2.0.0),
+    patchwork (>= 1.1.0),
+    scales (>= 1.2.0),
+    viridis (>= 0.6.0)
+Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
