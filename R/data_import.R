@@ -185,7 +185,17 @@ read_lobster_trades <- function(file_path,
 #'
 #' @examples
 #' \dontrun{
-#' # Simple CSV with header row
+#' # ===========================================
+#' # Example 1: Preview Before Loading
+#' # ===========================================
+#'
+#' # Always preview first to understand your data
+#' preview_trade_file("my_trades.csv")
+#'
+#' # ===========================================
+#' # Example 2: Simple CSV with Header Row
+#' # ===========================================
+#'
 #' trades <- read_trade_csv(
 #'   "my_trades.csv",
 #'   time_col = "timestamp",
@@ -194,25 +204,127 @@ read_lobster_trades <- function(file_path,
 #'   price_col = "price"
 #' )
 #'
-#' # CSV with numeric columns (no header)
+#' # Validate the loaded data
+#' validate_trade_data(trades)
+#'
+#' # ===========================================
+#' # Example 3: CSV with Numeric Columns
+#' # ===========================================
+#'
+#' # When your CSV has no header or you prefer column numbers
 #' trades <- read_trade_csv(
 #'   "trades_noheader.csv",
-#'   time_col = 1,  # First column
-#'   side_col = 2,  # Second column
-#'   size_col = 3,
-#'   price_col = 4,
-#'   time_format = "unix"
+#'   time_col = 1,        # First column is timestamp
+#'   side_col = 2,        # Second column is side
+#'   size_col = 3,        # Third column is size
+#'   price_col = 4,       # Fourth column is price
+#'   col_names = FALSE    # No header row
 #' )
 #'
-#' # Intraday data with time-only column
+#' # ===========================================
+#' # Example 4: Unix Timestamp Format
+#' # ===========================================
+#'
+#' # If timestamps are in Unix epoch format
+#' trades <- read_trade_csv(
+#'   "unix_data.csv",
+#'   time_col = 1,
+#'   side_col = 2,
+#'   size_col = 3,
+#'   time_format = "unix",
+#'   tz = "America/New_York"
+#' )
+#'
+#' # ===========================================
+#' # Example 5: Intraday Time-Only Data
+#' # ===========================================
+#'
+#' # When data only has time (e.g., "09:30:01") but no date
 #' trades <- read_trade_csv(
 #'   "intraday.csv",
 #'   time_col = "time",
+#'   side_col = "direction",
+#'   size_col = "qty",
+#'   time_format = "time_only",
+#'   date = "2024-01-15",  # Specify the trading date
+#'   tz = "America/New_York"
+#' )
+#'
+#' # ===========================================
+#' # Example 6: Custom Side Mappings
+#' # ===========================================
+#'
+#' # If your data uses BID/ASK instead of B/S
+#' trades <- read_trade_csv(
+#'   "data.csv",
+#'   time_col = "timestamp",
+#'   side_col = "direction",
+#'   size_col = "volume",
+#'   side_mapping = c("BID" = "B", "ASK" = "S")
+#' )
+#'
+#' # Or if using numeric indicators
+#' trades <- read_trade_csv(
+#'   "data.csv",
+#'   time_col = 1,
+#'   side_col = 2,
+#'   size_col = 3,
+#'   side_mapping = c("1" = "B", "-1" = "S")
+#' )
+#'
+#' # ===========================================
+#' # Example 7: Complete Workflow
+#' # ===========================================
+#'
+#' # Step 1: Preview
+#' preview_trade_file("my_data.csv")
+#'
+#' # Step 2: Load
+#' trades <- read_trade_csv(
+#'   "my_data.csv",
+#'   time_col = "timestamp",
+#'   side_col = "side",
+#'   size_col = "size",
+#'   tz = "America/New_York"
+#' )
+#'
+#' # Step 3: Validate
+#' validation <- validate_trade_data(trades)
+#' print(validation)
+#'
+#' # Step 4: Clean if needed
+#' if (!validation$valid) {
+#'   trades <- clean_trade_data(trades)
+#' }
+#'
+#' # Step 5: Compute OFI
+#' ofi <- compute_ofi(trades, window = "1 min")
+#'
+#' # ===========================================
+#' # Example 8: Different Data Providers
+#' # ===========================================
+#'
+#' # Bloomberg Terminal exports
+#' trades_bb <- read_trade_csv(
+#'   "bloomberg.csv",
+#'   time_col = "Time",
+#'   side_col = "Side",
+#'   size_col = "Size",
 #'   time_format = "time_only",
 #'   date = "2024-01-15",
 #'   side_mapping = c("BID" = "B", "ASK" = "S")
 #' )
+#'
+#' # Interactive Brokers (IB) TWS exports
+#' # Note: IB often has separate Date and Time columns
+#' # You may need to preprocess with read.csv() first
 #' }
+#'
+#' @seealso
+#' \code{\link{preview_trade_file}} to inspect files before loading,
+#' \code{\link{validate_trade_data}} to check data quality,
+#' \code{\link{clean_trade_data}} to fix common issues,
+#' \code{\link{read_lobster_trades}} for LOBSTER format
 read_trade_csv <- function(file_path,
                            time_col = 1,
                            side_col = 2,

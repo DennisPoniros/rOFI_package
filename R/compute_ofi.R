@@ -38,20 +38,79 @@
 #' @importFrom rlang .data
 #'
 #' @examples
+#' # ===========================================
+#' # Example 1: Basic OFI Calculation
+#' # ===========================================
+#'
 #' # Generate sample data
 #' trades <- simulate_orders(n = 1000, seed = 123)
-#' 
+#'
 #' # Calculate OFI with 1-minute windows
 #' ofi_1min <- compute_ofi(trades, window = "1 min")
-#' 
-#' # Calculate with 5-minute windows
-#' ofi_5min <- compute_ofi(trades, window = "5 min")
-#' 
-#' # Rolling 60-second windows
-#' ofi_rolling <- compute_ofi(trades, rolling = lubridate::dseconds(60))
-#' 
-#' # Event-based windows (every 50 trades)
+#'
+#' # View results
+#' head(ofi_1min)
+#'
+#' # Check summary statistics
+#' summary(ofi_1min$oir)  # Order Imbalance Ratio
+#'
+#' # ===========================================
+#' # Example 2: Different Time Scales
+#' # ===========================================
+#'
+#' # Fast: 30-second windows (more responsive, noisier)
+#' ofi_30s <- compute_ofi(trades, window = "30 sec")
+#'
+#' # Medium: 1-minute windows
+#' ofi_1m <- compute_ofi(trades, window = "1 min")
+#'
+#' # Slow: 5-minute windows (smoother, less responsive)
+#' ofi_5m <- compute_ofi(trades, window = "5 min")
+#'
+#' # Compare number of windows
+#' cat("30s windows:", nrow(ofi_30s), "\n")
+#' cat("1m windows:", nrow(ofi_1m), "\n")
+#' cat("5m windows:", nrow(ofi_5m), "\n")
+#'
+#' # ===========================================
+#' # Example 3: Tick-Based Windows
+#' # ===========================================
+#'
+#' # Group by number of trades instead of time
+#' # Useful for markets with irregular trading activity
 #' ofi_ticks <- compute_ofi(trades, n_ticks = 50)
+#'
+#' # Each window has exactly 50 trades
+#' head(ofi_ticks)
+#'
+#' # ===========================================
+#' # Example 4: Analyzing Results
+#' # ===========================================
+#'
+#' ofi <- compute_ofi(trades, window = "1 min")
+#'
+#' # Find periods of strong buying pressure
+#' strong_buy <- ofi[ofi$oir > 0.3, ]
+#' cat("Periods with strong buying:", nrow(strong_buy), "\n")
+#'
+#' # Find periods of strong selling pressure
+#' strong_sell <- ofi[ofi$oir < -0.3, ]
+#' cat("Periods with strong selling:", nrow(strong_sell), "\n")
+#'
+#' # Calculate average OFI
+#' avg_ofi <- mean(ofi$ofi)
+#' cat("Average OFI:", round(avg_ofi, 2), "\n")
+#'
+#' # ===========================================
+#' # Example 5: Rolling Windows (Advanced)
+#' # ===========================================
+#'
+#' \dontrun{
+#' # Overlapping 60-second windows
+#' # Provides smoother transitions between periods
+#' ofi_rolling <- compute_ofi(trades, rolling = lubridate::dseconds(60))
+#' head(ofi_rolling)
+#' }
 compute_ofi <- function(data,
                        window = "1 min",
                        rolling = NULL,

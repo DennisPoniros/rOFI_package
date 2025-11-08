@@ -1,0 +1,277 @@
+---
+title: "Testing All rOFI Functions with Synthetic Data"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Testing All rOFI Functions with Synthetic Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+## Introduction
+
+This vignette shows you how to test and learn **every** rOFI function using synthetic data. Perfect for:
+
+- Learning how each module works
+- Testing your code before using real data
+- Teaching market microstructure concepts
+- Validating your analysis pipeline
+
+## Generate Comprehensive Test Data
+
+The `generate_test_data()` function creates all data formats needed for rOFI:
+
+```{r setup}
+library(rOFI)
+
+# Generate all test data formats
+test_data <- generate_test_data(
+  n_trades = 1000,
+  n_messages = 2000,
+  n_snapshots = 100,
+  n_levels = 10,
+  seed = 42
+)
+
+# See what you got
+print(test_data)
+```
+
+## Module 1: Basic OFI Analysis
+
+```{r module1}
+# Use trade data
+trades <- test_data$trades
+
+# Compute OFI
+ofi <- compute_ofi(trades, window = "1 min")
+head(ofi)
+
+# Visualize
+plot_ofi(ofi, which = c("ofi", "oir"))
+```
+
+## Module 2: Advanced Visualization
+
+```{r module2}
+# Diagnostic dashboard
+plot_ofi_diagnostics(ofi, metric = "oir", max_lag = 20)
+
+# STL decomposition
+plot_ofi_decomposition(ofi, metric = "oir")
+
+# Regime detection
+plot_regime_detection(ofi, method = "quantile", n_regimes = 3)
+```
+
+## Module 3: Price Impact Models
+
+```{r module3}
+# Square-root law
+impact <- sqrt_impact(Q = 10000, V = 100000, sigma = 0.02)
+cat("Price impact:", impact, "bps\n")
+
+# Almgren-Chriss optimal execution
+trajectory <- almgren_chriss_trajectory(
+  Q = 100000,
+  T_horizon = 60,
+  lambda = 1e-6
+)
+print(trajectory)
+
+# Calibrate from execution data
+executions <- test_data$executions
+calibration <- calibrate_sqrt_law(executions)
+print(calibration)
+```
+
+## Module 4: Regulatory Surveillance
+
+```{r module4}
+# Use message data
+messages <- test_data$messages
+
+# Detect spoofing
+spoof_result <- detect_spoofing(
+  messages,
+  cancel_threshold = 0.70,
+  size_threshold = 0.90
+)
+print(spoof_result)
+
+# Detect layering
+layer_result <- detect_layering(
+  messages,
+  n_levels = 5,
+  coordination_threshold = 0.70
+)
+print(layer_result)
+
+# Multi-algorithm surveillance
+alerts <- surveillance_alert_system(
+  messages,
+  sensitivity = "medium"
+)
+print(alerts)
+```
+
+## Module 5: Multi-Level Order Book
+
+```{r module5}
+# Use orderbook snapshots
+orderbook <- test_data$orderbook
+
+# Multi-level OFI
+ml_ofi <- compute_multilevel_ofi(
+  orderbook,
+  n_levels = 5,
+  weighting = "volume"
+)
+print(ml_ofi)
+
+# Order book slope (depth decay)
+slope <- orderbook_slope(orderbook, n_levels = 10)
+print(slope)
+
+# Microprice
+mp <- microprice(orderbook, n_levels = 1)
+head(mp)
+```
+
+## Module 6: Cross-Market Analysis
+
+```{r module6}
+# Use multi-venue data
+multi_venue <- test_data$multi_venue
+
+# Cross-asset OFI
+cross_ofi <- compute_cross_asset_ofi(
+  multi_venue,
+  window = "1 min"
+)
+print(cross_ofi)
+
+# Lead-lag analysis (which venue leads?)
+leadlag <- lead_lag_analysis(
+  cross_ofi$ofi_data$NYSE,
+  cross_ofi$ofi_data$NASDAQ,
+  max_lag = 10
+)
+print(leadlag)
+```
+
+## Module 7: Machine Learning Features
+
+```{r module7}
+# Engineer features from trade data
+features <- engineer_ofi_features(
+  trades,
+  orderbook = orderbook,
+  lookback = 5,
+  n_levels = 3
+)
+
+cat("Generated", ncol(features), "features\n")
+head(features[, 1:10])  # Show first 10 features
+
+# Create event bars (better than time bars for ML)
+tick_bars <- create_event_bars(
+  trades,
+  bar_type = "tick",
+  bar_size = 100
+)
+cat("Created", nrow(tick_bars), "tick bars\n")
+
+# Stationarize for modeling
+stationary <- stationarize_ofi(
+  ofi,
+  method = "standardize"
+)
+cat("Mean:", mean(stationary$oir, na.rm = TRUE), "(should be ~0)\n")
+cat("SD:", sd(stationary$oir, na.rm = TRUE), "(should be ~1)\n")
+
+# Create ML dataset with proper train/test split
+ml_features <- data.frame(
+  feature1 = rnorm(100),
+  feature2 = rnorm(100),
+  feature3 = rnorm(100),
+  target = rnorm(100)
+)
+
+dataset <- create_ml_dataset(
+  ml_features,
+  target_col = "target",
+  train_fraction = 0.70
+)
+
+cat("Train set:", nrow(dataset$train), "rows\n")
+cat("Validation set:", nrow(dataset$validation), "rows\n")
+cat("Test set:", nrow(dataset$test), "rows\n")
+```
+
+## Complete Workflow Example
+
+Here's a complete analysis using all modules:
+
+```{r workflow}
+# 1. Generate test data
+test_data <- generate_test_data(n_trades = 500, seed = 123)
+
+# 2. Basic OFI
+ofi <- compute_ofi(test_data$trades, window = "1 min")
+
+# 3. Visualize
+plot_ofi_diagnostics(ofi)
+
+# 4. Test for manipulation
+alerts <- surveillance_alert_system(test_data$messages)
+cat("Alerts generated:", nrow(alerts$alerts), "\n")
+
+# 5. Multi-level metrics
+ml_metrics <- compute_multilevel_ofi(test_data$orderbook, n_levels = 5)
+cat("Multi-level OFI improvement:", ml_metrics$improvement_vs_single_level, "%\n")
+
+# 6. Price impact
+impact <- sqrt_impact(Q = 50000, V = 1000000, sigma = 0.02)
+cat("Expected impact:", round(impact, 2), "bps\n")
+
+# 7. Feature engineering for ML
+features <- engineer_ofi_features(test_data$trades, lookback = 5)
+cat("ML features generated:", ncol(features), "\n")
+```
+
+## Key Takeaways
+
+1. **generate_test_data()** creates all data formats you need
+2. Each module has specific data requirements (trades vs messages vs orderbook)
+3. You can test **every** function without real market data
+4. Synthetic data is perfect for learning and development
+5. When you're ready, apply the same functions to real data!
+
+## Next Steps
+
+- Try each module with your own parameters
+- Experiment with different data generation settings
+- When ready, load real data using `read_taq_trades()` or `read_lobster_trades()`
+- The same functions work on both synthetic and real data!
+
+## Additional Resources
+
+```{r, eval=FALSE}
+# Explore all functions
+?generate_test_data
+?compute_ofi
+?detect_spoofing
+?compute_multilevel_ofi
+
+# See all available vignettes
+browseVignettes("rOFI")
+```

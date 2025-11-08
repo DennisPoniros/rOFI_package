@@ -389,7 +389,7 @@ estimate_price_impact <- function(data,
 #' - High-frequency trading strategy evaluation
 #'
 #' @export
-#' @importFrom dplyr mutate group_by summarise n cumsum
+#' @importFrom dplyr mutate group_by summarise n
 #' @importFrom tibble tibble
 #' @importFrom rlang .data
 #'

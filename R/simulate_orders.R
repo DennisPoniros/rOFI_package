@@ -30,7 +30,7 @@
 #' @export
 #' @importFrom tibble tibble
 #' @importFrom lubridate seconds
-#' @importFrom stats rexp rbinom rlnorm rnorm cumsum
+#' @importFrom stats rexp rbinom rlnorm rnorm
 #'
 #' @examples
 #' # Generate balanced order flow
