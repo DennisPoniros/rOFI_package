@@ -1,9 +1,33 @@
-#' rOFI: Compute and Visualize Order-Flow Imbalance Patterns
+#' rOFI: The Comprehensive Market Microstructure Toolkit for R
 #'
 #' @description
-#' Order-Flow Imbalance (OFI) measures the buying vs. selling pressure in
-#' financial markets by analyzing trade-level data. This package provides a
-#' comprehensive toolkit for:
+#' rOFI is the world's first comprehensive market microstructure toolkit built
+#' entirely in R, designed for both educational research and professional
+#' quantitative trading. From basic Order-Flow Imbalance (OFI) calculations to
+#' advanced surveillance algorithms and machine learning features, rOFI provides
+#' everything you need to analyze, visualize, and model market microstructure
+#' dynamics.
+#'
+#' \strong{Complete Feature Set (7 Major Modules):}
+#'
+#' \itemize{
+#'   \item \strong{Advanced Visualization Dashboard}: Publication-quality plots,
+#'         diagnostics, regime detection, STL decomposition
+#'   \item \strong{Price Impact Models}: Almgren-Chriss, square-root law,
+#'         Obizhaeva-Wang, TCA metrics
+#'   \item \strong{Production Data Pipelines}: NYSE TAQ, NASDAQ ITCH, LOBSTER,
+#'         multi-venue consolidation, trade classification
+#'   \item \strong{Regulatory Surveillance}: Spoofing, layering, quote stuffing
+#'         detection, alert systems, compliance reporting
+#'   \item \strong{Multi-Level Order Book}: Multi-level OFI, slope, curvature,
+#'         microprice, resilience metrics
+#'   \item \strong{Cross-Market Analysis}: Lead-lag analysis, price discovery,
+#'         arbitrage detection, spillover analysis
+#'   \item \strong{ML Feature Engineering}: 100+ features, event bars,
+#'         stationarization, proper train/test splitting
+#' }
+#'
+#' \strong{Plus Core Functionality:}
 #'
 #' \itemize{
 #'   \item Computing OFI metrics (simple, EWMA, VWAP-weighted, momentum)
@@ -11,7 +35,6 @@
 #'   \item Statistical testing (autocorrelation, lead-lag, bootstrap)
 #'   \item Market microstructure analysis (Kyle's lambda, VPIN, spread decomposition)
 #'   \item Data quality validation and cleaning
-#'   \item Professional visualizations
 #' }
 #'
 #' @section Quick Start Guide:
@@ -105,6 +128,82 @@
 #'
 #' @section All Functions by Category:
 #'
+#' \strong{ADVANCED VISUALIZATION DASHBOARD (NEW)}
+#' \itemize{
+#'   \item \code{\link{plot_ofi_diagnostics}}: 6-panel diagnostic dashboard (ACF, PACF, Q-Q, distribution)
+#'   \item \code{\link{plot_ofi_decomposition}}: STL decomposition (trend/seasonal/irregular)
+#'   \item \code{\link{plot_market_quality}}: 4-panel market quality dashboard
+#'   \item \code{\link{plot_regime_detection}}: Market state identification via clustering
+#'   \item \code{\link{plot_comparative_analysis}}: Multi-asset/multi-period comparison
+#'   \item \code{\link{theme_publication}}: Professional publication theme
+#' }
+#'
+#' \strong{PRICE IMPACT MODELS (NEW)}
+#' \itemize{
+#'   \item \code{\link{almgren_chriss_trajectory}}: Optimal execution with risk aversion
+#'   \item \code{\link{sqrt_impact}}: Universal square-root law
+#'   \item \code{\link{calibrate_sqrt_law}}: Fit Y parameter from executions
+#'   \item \code{\link{decompose_price_impact}}: Temporary vs permanent impact
+#'   \item \code{\link{implementation_shortfall}}: Implementation shortfall (TCA)
+#'   \item \code{\link{obizhaeva_wang_impact}}: Propagator model
+#'   \item \code{\link{predict_execution_cost}}: Model comparison
+#' }
+#'
+#' \strong{PRODUCTION DATA PIPELINES (NEW)}
+#' \itemize{
+#'   \item \code{\link{read_taq_trades}}: NYSE TAQ format parser
+#'   \item \code{\link{read_itch_messages}}: NASDAQ ITCH message parser
+#'   \item \code{\link{reconstruct_orderbook}}: Rebuild LOB from messages
+#'   \item \code{\link{classify_trades}}: Lee-Ready, EMO, tick rule
+#'   \item \code{\link{consolidate_venues}}: Multi-venue consolidation
+#'   \item \code{\link{validate_tick_data}}: Comprehensive validation
+#' }
+#'
+#' \strong{REGULATORY SURVEILLANCE (NEW)}
+#' \itemize{
+#'   \item \code{\link{detect_spoofing}}: Fake order detection
+#'   \item \code{\link{detect_layering}}: Multi-level manipulation
+#'   \item \code{\link{detect_quote_stuffing}}: Message velocity detection
+#'   \item \code{\link{compute_order_to_trade_ratio}}: OTR monitoring
+#'   \item \code{\link{analyze_cancellation_patterns}}: Cancel behavior analysis
+#'   \item \code{\link{surveillance_alert_system}}: Multi-algorithm alerts
+#'   \item \code{\link{market_manipulation_report}}: Compliance reporting
+#' }
+#'
+#' \strong{MULTI-LEVEL ORDER BOOK (NEW)}
+#' \itemize{
+#'   \item \code{\link{compute_multilevel_ofi}}: OFI across levels with weighting
+#'   \item \code{\link{orderbook_slope}}: Depth decay rate
+#'   \item \code{\link{orderbook_curvature}}: Second derivative
+#'   \item \code{\link{volume_distribution_levels}}: Depth profiles
+#'   \item \code{\link{bid_ask_pressure}}: Asymmetric depth
+#'   \item \code{\link{depth_imbalance}}: Multi-level imbalance
+#'   \item \code{\link{microprice}}: Volume-weighted mid
+#'   \item \code{\link{order_book_resilience}}: Replenishment speed
+#' }
+#'
+#' \strong{CROSS-MARKET ANALYSIS (NEW)}
+#' \itemize{
+#'   \item \code{\link{compute_cross_asset_ofi}}: Multi-instrument OFI matrix
+#'   \item \code{\link{lead_lag_analysis}}: Price discovery via CCF
+#'   \item \code{\link{cross_impact_matrix}}: Cross-asset impact
+#'   \item \code{\link{lagged_cross_correlation}}: Time-lagged relationships
+#'   \item \code{\link{price_discovery_metrics}}: Information shares
+#'   \item \code{\link{pca_orderflow}}: Common factors extraction
+#'   \item \code{\link{spillover_analysis}}: Shock transmission
+#'   \item \code{\link{arbitrage_opportunities}}: Cross-market pricing
+#'   \item \code{\link{etf_arbitrage_metrics}}: ETF vs NAV
+#' }
+#'
+#' \strong{MACHINE LEARNING FEATURES (NEW)}
+#' \itemize{
+#'   \item \code{\link{engineer_ofi_features}}: 100+ feature generation
+#'   \item \code{\link{create_event_bars}}: Tick/volume/dollar bars
+#'   \item \code{\link{stationarize_ofi}}: Transformations for modeling
+#'   \item \code{\link{create_ml_dataset}}: Proper train/test splits
+#'   \item \code{\link{create_prediction_targets}}: Response variables
+#' }
+#'
 #' \strong{Data Loading & Preparation}
 #' \itemize{
 #'   \item \code{\link{read_trade_csv}}: Load data from CSV files
@@ -138,7 +237,7 @@
 #'   \item \code{\link{bootstrap_ofi_significance}}: Bootstrap hypothesis tests
 #' }
 #'
-#' \strong{Market Microstructure}
+#' \strong{Market Microstructure (Core)}
 #' \itemize{
 #'   \item \code{\link{kyle_lambda_estimation}}: Kyle's lambda (price impact)
 #'   \item \code{\link{estimate_price_impact}}: Temporary/permanent impact
@@ -147,7 +246,7 @@
 #'   \item \code{\link{decompose_spread}}: Spread component analysis
 #' }
 #'
-#' \strong{Visualization}
+#' \strong{Visualization (Core)}
 #' \itemize{
 #'   \item \code{\link{plot_ofi}}: Time series plots of OFI metrics
 #'   \item \code{\link{plot_ofi_dist}}: Distribution plots
@@ -300,8 +399,23 @@
 #' @section Package Vignettes:
 #' \itemize{
 #'   \item \code{vignette("introduction-to-ofi")}: Beginner-friendly introduction
+#'   \item \code{vignette("advanced-visualization")}: Publication-quality plots and diagnostics
 #'   \item \code{vignette("data-preparation")}: Loading and cleaning data
 #'   \item \code{vignette("getting-started")}: Complete workflows
+#' }
+#'
+#' @section Who is rOFI for?:
+#' \itemize{
+#'   \item \strong{Academic Researchers}: Publication-quality visualizations,
+#'         rigorous statistical tests, comprehensive documentation
+#'   \item \strong{Quantitative Analysts}: Production-ready data pipelines,
+#'         ML features, price impact models for strategy development
+#'   \item \strong{Compliance Officers}: Regulatory surveillance algorithms
+#'         (spoofing, layering, quote stuffing detection)
+#'   \item \strong{Students}: Gentle learning curve with extensive vignettes,
+#'         examples, and synthetic data generation
+#'   \item \strong{Regulators}: Market manipulation detection,
+#'         order-to-trade ratio monitoring, alert systems
 #' }
 #'
 #' @section Getting Help:
