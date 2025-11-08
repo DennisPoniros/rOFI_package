@@ -65,63 +65,26 @@ if (!requireNamespace("rOFI", quietly = TRUE)) {
   suppressPackageStartupMessages(library(rOFI))
 }
 
-# Generate synthetic trade data for testing
+# Generate comprehensive test data for all modules
 set.seed(42)
-test_trades <- simulate_orders(
-  n = 5000,
-  start = as.POSIXct("2024-01-15 09:30:00", tz = "America/New_York"),
-  lambda = 10,
-  imb = 0.1,
-  drift = 0.05,
-  vol = 0.02,
+test_data <- generate_test_data(
+  n_trades = 5000,
+  n_messages = 1000,
+  n_snapshots = 100,
+  n_levels = 10,
   seed = 42
 )
+
+# Extract components for easier access
+test_trades <- test_data$trades
+test_messages <- test_data$messages
+test_orderbook <- test_data$orderbook
+test_executions <- test_data$executions
+test_multi_venue <- test_data$multi_venue
 
 # Generate OFI for various tests
 test_ofi <- compute_ofi(test_trades, window = "1 min")
 test_ofi_5min <- compute_ofi(test_trades, window = "5 min")
-
-# Generate synthetic message data for surveillance/orderbook tests
-generate_mock_messages <- function(n = 1000) {
-  tibble::tibble(
-    timestamp = seq(as.POSIXct("2024-01-15 09:30:00", tz = "UTC"),
-                    by = "0.1 sec", length.out = n),
-    type = sample(c("add", "cancel", "execute"), n, replace = TRUE,
-                  prob = c(0.4, 0.3, 0.3)),
-    side = sample(c("bid", "ask"), n, replace = TRUE),
-    price = 100 + cumsum(rnorm(n, 0, 0.01)),
-    size = sample(100:1000, n, replace = TRUE),
-    order_id = 1:n,
-    level = sample(1:10, n, replace = TRUE)
-  )
-}
-
-test_messages <- generate_mock_messages(1000)
-
-# Generate synthetic orderbook
-generate_mock_orderbook <- function(n_snapshots = 100, n_levels = 10) {
-  base_price <- 100
-  snapshots <- list()
-
-  for (i in 1:n_snapshots) {
-    mid_price <- base_price + cumsum(rnorm(1, 0, 0.01))
-
-    bid_prices <- seq(mid_price - 0.01, mid_price - 0.01 * n_levels, length.out = n_levels)
-    ask_prices <- seq(mid_price + 0.01, mid_price + 0.01 * n_levels, length.out = n_levels)
-
-    snapshots[[i]] <- tibble::tibble(
-      timestamp = as.POSIXct("2024-01-15 09:30:00", tz = "UTC") + i * 10,
-      level = rep(1:n_levels, 2),
-      side = rep(c("bid", "ask"), each = n_levels),
-      price = c(bid_prices, ask_prices),
-      size = sample(100:5000, n_levels * 2, replace = TRUE)
-    )
-  }
-
-  dplyr::bind_rows(snapshots)
-}
-
-test_orderbook <- generate_mock_orderbook(100, 10)
 
 cat("  ✓ Test data generated successfully\n\n")
 
@@ -234,14 +197,7 @@ test_function("sqrt_impact()", {
 })
 
 test_function("calibrate_sqrt_law()", {
-  # Create synthetic execution data
-  executions <- data.frame(
-    quantity = runif(100, 1000, 100000),
-    volume = runif(100, 500000, 5000000),
-    volatility = runif(100, 0.01, 0.05),
-    price_impact = runif(100, 0.001, 0.05)
-  )
-  result <- calibrate_sqrt_law(executions)
+  result <- calibrate_sqrt_law(test_executions)
   stopifnot(inherits(result, "sqrt_calibration"))
   stopifnot("Y_fitted" %in% names(result))
 })
@@ -301,13 +257,7 @@ test_function("validate_tick_data()", {
 })
 
 test_function("consolidate_venues()", {
-  # Create multi-venue data
-  venue1 <- test_trades[1:1000, ]
-  venue2 <- test_trades[1001:2000, ]
-  venue1$venue <- "NYSE"
-  venue2$venue <- "NASDAQ"
-
-  result <- consolidate_venues(list(NYSE = venue1, NASDAQ = venue2))
+  result <- consolidate_venues(test_multi_venue)
   stopifnot(nrow(result) > 0)
   stopifnot("nbbo" %in% names(result) || "consolidated" %in% class(result))
 })
